@@ -1,0 +1,277 @@
+>> USER: I want to display Instagram Post Insights in a react app. I have basic Programming knowledge. Please give me step by step tutorial with all code with explanation.
+
+>> ASSISTANT: To display Instagram Post Insights in a React app, you'll first need to make sure you have the following:
+
+1. A Facebook Developer account
+2. An Instagram Business or Creator account
+3. A Facebook App with Basic settings configured
+4. Access to Instagram Graph API
+
+Here's a step-by-step tutorial for displaying Instagram Post Insights in a React app:
+
+Step 1: Set up a new React project
+Create a new React project using the following command:
+
+```
+npx create-react-app instagram-insights
+cd instagram-insights
+```
+
+Step 2: Install Axios
+Axios is a popular library for making HTTP requests. Install it using:
+
+```
+npm install axios
+```
+
+Step 3: Obtain Instagram User Access Token
+Follow the instructions in the official Facebook documentation to generate a User Access Token with the "instagram_basic" and "instagram_manage_insights" permissions: https://developers.facebook.com/docs/instagram-basic-display-api/getting-started
+
+Step 4: Create a new component for displaying insights
+
+Create a new file `InstagramInsights.js` in the `src` folder and add the following code:
+
+```jsx
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const InstagramInsights = () => {
+  const [insights, setInsights] = useState([]);
+
+  // Replace with your user access token
+  const accessToken = 'YOUR_ACCESS_TOKEN';
+
+  useEffect(() => {
+    const fetchInsights = async () => {
+      try {
+        const response = await axios.get(`https://graph.instagram.com/me/media?fields=id,media_type,media_url,caption,timestamp&access_token=${accessToken}`);
+        const mediaData = response.data.data;
+        const insightsData = await Promise.all(mediaData.map(async (media) => {
+          const insightsResponse = await axios.get(`https://graph.facebook.com/${media.id}/insights?metric=engagement,impressions,reach,saved&access_token=${accessToken}`);
+          return {
+            ...media,
+            insights: insightsResponse.data.data
+          };
+        }));
+        setInsights(insightsData);
+      } catch (error) {
+        console.error('Error fetching Instagram insights:', error);
+      }
+    };
+
+    fetchInsights();
+  }, [accessToken]);
+
+  return (
+    <div>
+      <h1>Instagram Post Insights</h1>
+      {insights.map((item, index) => (
+        <div key={index}>
+          <h2>{item.caption || 'No caption'}</h2>
+          <p><strong>Timestamp:</strong> {item.timestamp}</p>
+          {item.media_type === 'IMAGE' && <img src={item.media_url} alt={item.caption} style={{ maxWidth: '300px' }} />}
+          <ul>
+            {item.insights.map((insight, index) => (
+              <li key={index}><strong>{insight.name}:</strong> {insight.values[0].value}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default InstagramInsights;
+```
+
+Replace 'YOUR_ACCESS_TOKEN' with the access token you obtained in Step 3.
+
+Step 5: Include the component in your `App.js` file
+
+Open `src/App.js` and replace its content with the following:
+
+```jsx
+import React from 'react';
+import './App.css';
+import InstagramInsights from './InstagramInsights';
+
+function App() {
+  return (
+    <div className="App">
+      <header className="App-header">
+        <InstagramInsights />
+      </header>
+    </div>
+  );
+}
+
+export default App;
+```
+
+Step 6: Run your React app
+
+Now,
+
+>> USER: Are you sure this will work ? and what permission I need to allow in fb app and how can get access token
+
+>> ASSISTANT: Apologies for the confusion in my previous response. I made a mistake in the API endpoint; the correct API to use for Instagram Post Insights is the Instagram Graph API, not the Instagram Basic Display API. Here's the updated step-by-step guide.
+
+Step 1 to Step 2 remain the same.
+
+Step 3: Obtain Instagram User Access Token and Page Access Token
+1. Go to the [Facebook Access Token Debugger](https://developers.facebook.com/tools/debug/accesstoken/).
+2. In the "Debug" section, input the User Access Token you obtained in the [Access Token Guide](https://developers.facebook.com/docs/facebook-login/access-tokens/). 
+3. Click "Debug" and then "Submit". You will see the User Access Token's information. Make sure it has the "instagram_basic" and "instagram_manage_insights" permissions. If it doesn't, follow the [Access Token Guide](https://developers.facebook.com/docs/facebook-login/access-tokens/) to generate a new User Access Token with the required permissions.
+
+Step 4: Get the Instagram Business Account ID
+Use the User Access Token to obtain the Instagram Business Account ID by sending a GET request to the following endpoint:
+
+```
+https://graph.facebook.com/v13.0/me/accounts?fields=instagram_business_account&access_token={user-access-token}
+```
+
+Replace `{user-access-token}` with the User Access Token you obtained in Step 3.
+
+Step 5: Create a new component for displaying insights
+
+Create a new file `InstagramInsights.js` in the `src` folder and add the following code:
+
+```jsx
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const InstagramInsights = () => {
+  const [insights, setInsights] = useState([]);
+
+  // Replace with your Instagram Business Account ID and User Access Token
+  const instagramBusinessAccountId = 'YOUR_INSTAGRAM_BUSINESS_ACCOUNT_ID';
+  const accessToken = 'YOUR_USER_ACCESS_TOKEN';
+
+  useEffect(() => {
+    const fetchInsights = async () => {
+      try {
+        const response = await axios.get(`https://graph.facebook.com/v13.0/${instagramBusinessAccountId}/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp,insights.metric(engagement,impressions,reach,saved)&access_token=${accessToken}`);
+        setInsights(response.data.data);
+      } catch (error) {
+        console.error('Error fetching Instagram insights:', error);
+      }
+    };
+
+    fetchInsights();
+  }, [accessToken, instagramBusinessAccountId]);
+
+  return (
+    <div>
+      <h1>Instagram Post Insights</h1>
+      {insights.map((item, index) => (
+        <div key={index}>
+          <h2>{item.caption || 'No caption'}</h2>
+          <p><strong>Timestamp:</strong> {item.timestamp}</p>
+          {item.media_type === 'IMAGE' && <img src={item.media_url} alt={item.caption} style={{ maxWidth: '300px' }} />}
+          {item.media_type === 'VIDEO' && <img src={item.thumbnail_url} alt={item.caption} style={{ maxWidth: '300px' }} />}
+          <ul>
+            {item.insights.data.map((insight, index) => (
+              <li key={index}><strong>{insight.name}:</strong> {insight.values[0].value}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default InstagramInsights;
+```
+
+Replace `YOUR_INSTAGRAM_BUSINESS_ACCOUNT_ID` with the Instagram Business Account ID you obtained in Step 4, and `YOUR_USER_ACCESS_TOKEN
+
+>> USER: Are you sure this is right and please explain all things if any left
+
+>> ASSISTANT: I apologize for any confusion in my previous responses. The following updated guide should provide the correct implementation for displaying Instagram Post Insights in a React app.
+
+Prerequisites:
+
+1. A Facebook Developer account
+2. An Instagram Business or Creator account connected to a Facebook Page
+3. A Facebook App with Basic settings configured
+4. Access to Instagram Graph API
+
+Step 1: Set up a new React project
+Create a new React project using the following command:
+
+```
+npx create-react-app instagram-insights
+cd instagram-insights
+```
+
+Step 2: Install Axios
+Axios is a popular library for making HTTP requests. Install it using:
+
+```
+npm install axios
+```
+
+Step 3: Obtain the Page Access Token
+Follow the instructions in the official Facebook documentation to generate a Page Access Token with the "instagram_basic" and "instagram_manage_insights" permissions: https://developers.facebook.com/docs/instagram-api/getting-started
+
+Step 4: Get the Instagram Business Account ID
+Use the Page Access Token to obtain the Instagram Business Account ID by sending a GET request to the following endpoint:
+
+```
+https://graph.facebook.com/v13.0/{page-id}?fields=instagram_business_account&access_token={page-access-token}
+```
+
+Replace `{page-id}` with your Facebook Page ID and `{page-access-token}` with the Page Access Token you obtained in Step 3. Extract the `instagram_business_account` field value from the API response. This value is your Instagram Business Account ID.
+
+Step 5: Create a new component for displaying insights
+
+Create a new file `InstagramInsights.js` in the `src` folder and add the following code:
+
+```jsx
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const InstagramInsights = () => {
+  const [insights, setInsights] = useState([]);
+
+  // Replace with your Instagram Business Account ID and Page Access Token
+  const instagramBusinessAccountId = 'YOUR_INSTAGRAM_BUSINESS_ACCOUNT_ID';
+  const accessToken = 'YOUR_PAGE_ACCESS_TOKEN';
+
+  useEffect(() => {
+    const fetchInsights = async () => {
+      try {
+        const response = await axios.get(`https://graph.facebook.com/v13.0/${instagramBusinessAccountId}/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp,insights.metric(engagement,impressions,reach,saved)&access_token=${accessToken}`);
+        setInsights(response.data.data);
+      } catch (error) {
+        console.error('Error fetching Instagram insights:', error);
+      }
+    };
+
+    fetchInsights();
+  }, [accessToken, instagramBusinessAccountId]);
+
+  return (
+    <div>
+      <h1>Instagram Post Insights</h1>
+      {insights.map((item, index) => (
+        <div key={index}>
+          <h2>{item.caption || 'No caption'}</h2>
+          <p><strong>Timestamp:</strong> {item.timestamp}</p>
+          {item.media_type === 'IMAGE' && <img src={item.media_url} alt={item.caption} style={{ maxWidth: '300px' }} />}
+          {item.media_type === 'VIDEO' && <img src={item.thumbnail_url} alt={item.caption} style={{ maxWidth: '300px' }} />}
+          <ul>
+            {item.insights.data.map((insight, index) => (
+              <li key={index}><strong>{insight.name}:</strong> {insight.values[0].value}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default InstagramInsights;
+```
+
+Replace `YOUR_INSTAGRAM_BUSINESS_ACCOUNT_ID` with the Instagram
